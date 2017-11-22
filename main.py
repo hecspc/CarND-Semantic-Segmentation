@@ -5,6 +5,8 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 from tqdm import tqdm
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import sys
 
@@ -154,26 +156,28 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     samples_plot = []
     loss_plot = []
     sample = 0
-    for epoch in tqdm(range(epochs)):
-        counter = 0
-        for image, label in get_batches_fn(batch_size):
-            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict={
-                input_image: image,
-                correct_label: label,
-                keep_prob: keep_init,
-                learning_rate: 0.0001
-            })
-            samples_plot.append(sample)
-            loss_plot.append(loss)
-            sample = sample + batch_size
-            print("#%4d  (%10d): %.20f" % (counter, sample, loss))
-            counter = counter + 1
-        print("%4d/%4d Loss: %f" % (epoch, epochs, loss))
-    plt.plot(samples_plot, loss_plot, 'ro')
-    plt.savefig('runs/E%04d-B%04d-K%f.png' % (epochs, batch_size, keep_init))
-    with open('runs/E%04d-B%04d-K%f.txt' % (epochs, batch_size, keep_init), 'w') as f:
-        for s, l in zip(samples_plot, loss_plot):
-            f.write("%f\t%f\n" % (s, l))
+    for d in ['/device:GPU:0', '/device:GPU:1']:
+        with tf.device(d):
+            for epoch in tqdm(range(epochs)):
+                counter = 0
+                for image, label in get_batches_fn(batch_size):
+                    _, loss = sess.run([train_op, cross_entropy_loss], feed_dict={
+                        input_image: image,
+                        correct_label: label,
+                        keep_prob: keep_init,
+                        learning_rate: 0.0001
+                    })
+                    samples_plot.append(sample)
+                    loss_plot.append(loss)
+                    sample = sample + batch_size
+                    print("#%4d  (%10d): %.20f" % (counter, sample, loss))
+                    counter = counter + 1
+                print("%4d/%4d Loss: %f" % (epoch, epochs, loss))
+            plt.plot(samples_plot, loss_plot, 'ro')
+            plt.savefig('runs/E%04d-B%04d-K%f.png' % (epochs, batch_size, keep_init))
+            with open('runs/E%04d-B%04d-K%f.txt' % (epochs, batch_size, keep_init), 'w') as f:
+                for s, l in zip(samples_plot, loss_plot):
+                    f.write("%f\t%f\n" % (s, l))
 
 
 tests.test_train_nn(train_nn)
