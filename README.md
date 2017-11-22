@@ -2,6 +2,52 @@
 ### Introduction
 In this project, you'll label the pixels of a road in images using a Fully Convolutional Network (FCN).
 
+### Training
+I followed the walktrhough for this project: a pre-trained VGG-16 network converted to a fully convolutional network with a 1x1 convolution and skipping the connections on layers 3 and 4.
+
+For the loss function I used a cross entropy and Adam as optimizer.
+
+For the training and the results shown here the next parameters were used:
+
+- Keep probability: 0.5
+- Epochs 50
+- Batch size 16
+- learning rate 0.001
+
+To change these parameters, run the script
+
+```
+$ python main.py  EPOCHS  BATCH_SIZE  KEEP_PROB
+```
+
+### Results
+
+
+In the next figure we can see the loss value over the samples trained
+
+![loss_value](./loss_value.png)
+
+After 50 epochs the value is 0.016465. 
+In the file `loss_value.txt` are the loss values for everyt batch run.
+
+
+Here we can see some images from the output:
+
+![um_000020](./um_000020.png)
+![um_000028](./um_000028.png)
+![um_000030](./um_000030.png)
+![um_000071](./um_000071.png)
+![umm_000049](./umm_000049.png)
+![um_000020](./um_000020.png)
+![uu_000091](./uu_000091.png)
+
+
+
+
+-----
+
+__Below this line is the original content from the readme file__
+
 ### Setup
 ##### Frameworks and Packages
 Make sure you have the following is installed:
