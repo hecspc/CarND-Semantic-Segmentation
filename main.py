@@ -156,28 +156,28 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     samples_plot = []
     loss_plot = []
     sample = 0
-    for d in ['/device:GPU:0', '/device:GPU:1']:
-        with tf.device(d):
-            for epoch in tqdm(range(epochs)):
-                counter = 0
-                for image, label in get_batches_fn(batch_size):
-                    _, loss = sess.run([train_op, cross_entropy_loss], feed_dict={
-                        input_image: image,
-                        correct_label: label,
-                        keep_prob: keep_init,
-                        learning_rate: 0.0001
-                    })
-                    samples_plot.append(sample)
-                    loss_plot.append(loss)
-                    sample = sample + batch_size
-                    print("#%4d  (%10d): %.20f" % (counter, sample, loss))
-                    counter = counter + 1
-                print("%4d/%4d Loss: %f" % (epoch, epochs, loss))
-            plt.plot(samples_plot, loss_plot, 'ro')
-            plt.savefig('runs/E%04d-B%04d-K%f.png' % (epochs, batch_size, keep_init))
-            with open('runs/E%04d-B%04d-K%f.txt' % (epochs, batch_size, keep_init), 'w') as f:
-                for s, l in zip(samples_plot, loss_plot):
-                    f.write("%f\t%f\n" % (s, l))
+
+    for epoch in tqdm(range(epochs)):
+        counter = 0
+        for image, label in get_batches_fn(batch_size):
+
+            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict={
+                input_image: image,
+                correct_label: label,
+                keep_prob: keep_init,
+                learning_rate: 0.0001
+            })
+            samples_plot.append(sample)
+            loss_plot.append(loss)
+            sample = sample + batch_size
+            print("#%4d  (%10d): %.20f" % (counter, sample, loss))
+            counter = counter + 1
+        print("%4d/%4d Loss: %f" % (epoch, epochs, loss))
+    plt.plot(samples_plot, loss_plot, 'ro')
+    plt.savefig('runs/E%04d-B%04d-K%f.png' % (epochs, batch_size, keep_init))
+    with open('runs/E%04d-B%04d-K%f.txt' % (epochs, batch_size, keep_init), 'w') as f:
+        for s, l in zip(samples_plot, loss_plot):
+            f.write("%f\t%f\n" % (s, l))
 
 
 tests.test_train_nn(train_nn)
@@ -207,7 +207,7 @@ def run():
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
-    with tf.Session() as sess:
+    with tf.Session(config=tf.ConfigProto(log_device_placement=True)) as sess:
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
@@ -231,9 +231,9 @@ def run():
         saver = tf.train.Saver()
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-                 correct_label, keep_prob, learning_rate)
+                         correct_label, keep_prob, learning_rate)
 
-        save_path = saver.save(sess, "./runs/model_E%04d-B%04d-K%f.ckpt" % (epochs, batch_size, keep_prob))
+        save_path = saver.save(sess, "./runs/model_E%04d-B%04d-K%f.ckpt" % (epochs, batch_size, keep_init))
         print("Model saved in file: %s" % save_path)
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
