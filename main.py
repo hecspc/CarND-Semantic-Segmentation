@@ -4,6 +4,9 @@ import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import sys
 
 __all__ = [tf]
 
@@ -17,6 +20,11 @@ if not tf.test.gpu_device_name():
     warnings.warn('No GPU found. Please use a GPU to train your neural network.')
 else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
+
+
+epochs = 50
+batch_size = 5
+keep_init = 0.5
 
 
 def load_vgg(sess, vgg_path):
@@ -142,24 +150,46 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
 
-    sess.run(tf.global_variables_initializer())
-
-    print("Training...")
-    print()
-    for i in range(epochs):
-        print("EPOCH {} ...".format(i + 1))
+    loss = 99999
+    samples_plot = []
+    loss_plot = []
+    sample = 0
+    for epoch in tqdm(range(epochs)):
+        counter = 0
         for image, label in get_batches_fn(batch_size):
-            _, loss = sess.run([train_op, cross_entropy_loss],
-                               feed_dict={input_image: image, correct_label: label, keep_prob: 0.5,
-                                          learning_rate: 0.0009})
-            print("Loss: = {:.3f}".format(loss))
-    print()
+            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict={
+                input_image: image,
+                correct_label: label,
+                keep_prob: keep_init,
+                learning_rate: 0.0001
+            })
+            samples_plot.append(sample)
+            loss_plot.append(loss)
+            sample = sample + batch_size
+            print("#%4d  (%10d): %.20f" % (counter, sample, loss))
+            counter = counter + 1
+        print("%4d/%4d Loss: %f" % (epoch, epochs, loss))
+    plt.plot(samples_plot, loss_plot, 'ro')
+    plt.savefig('runs/E%04d-B%04d-K%f.png' % (epochs, batch_size, keep_init))
+    with open('runs/E%04d-B%04d-K%f.txt' % (epochs, batch_size, keep_init), 'w') as f:
+        for s, l in zip(samples_plot, loss_plot):
+            f.write("%f\t%f\n" % (s, l))
 
 
 tests.test_train_nn(train_nn)
 
 
 def run():
+
+    global epochs, keep_init, batch_size
+
+    if len(sys.argv) > 1:
+        epochs = int(sys.argv[1])
+    if len(sys.argv) > 2:
+        batch_size = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        keep_init = float(sys.argv[3])
+
     num_classes = 2
     image_shape = (160, 576)
     data_dir = './data'
@@ -183,8 +213,7 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 50
-        batch_size = 5
+
 
         # TF placeholders
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='correct_label')
@@ -194,8 +223,14 @@ def run():
 
         logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
         # TODO: Train NN using the train_nn function
+        sess.run(tf.global_variables_initializer())
+        saver = tf.train.Saver()
+
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
                  correct_label, keep_prob, learning_rate)
+
+        save_path = saver.save(sess, "./runs/model_E%04d-B%04d-K%f.ckpt" % (epochs, batch_size, keep_prob))
+        print("Model saved in file: %s" % save_path)
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
